@@ -5,7 +5,6 @@ matplotlib
 seaborn
 plotly.express
 plotly
-re
 sklearn
 category_encoders
 joblib
