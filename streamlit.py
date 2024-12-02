@@ -28,6 +28,7 @@ from scipy.special import inv_boxcox
 import shap
 
 st.set_page_config(layout="wide")
+
 st.title("ANALYSE EXPLORATOIRE ET MODELISATION DES VENTES GLOBALES DE JEUX VIDEO AVANT 2017")
 st.write("François Dumont, Thomas Bouffay, Olivier Steinbauer")
 st.sidebar.title("Sommaire")
@@ -85,6 +86,33 @@ df['PSP_x_GSP'] = df['Publisher_Sales_Period'] * df['Game_Sales_Period']
 
 ####################################### PAGE 2 (MODELISATION (1)) ###################################
 if page == pages[2] : 
+
+  df=pd.read_csv('cleaned_by_script_vgsales.csv')
+
+  #on passe les Name en minuscules dans df_uvlist et df_no_year
+  df.loc[:,'Name'] = df['Name'].str.lower()
+  df.loc[:,'Publisher'] = df['Publisher'].str.lower()
+  #on retire toutes les informations inutiles dans le nom de df_no_year elles sont entre parenthèses (JP sales)etc...
+  df.loc[:,'Name'] = df['Name'].str.split('(').str[0]
+  df.loc[:,'Publisher'] = df['Publisher'].str.split('(').str[0]
+
+  # On ne conserve que les mots et les espaces dans les Names
+  df.loc[:,'Name'] = df['Name'].apply(lambda x: re.sub(r'[^\w\s]','', x))
+  df.loc[:,'Publisher'] = df['Publisher'].apply(lambda x: re.sub(r'[^\w\s]','', x))
+
+  # on remplace les espaces doubles par des simples
+  df.loc[:,'Name'] = df['Name'].str.replace("  "," ")
+  df.loc[:,'Publisher'] = df['Publisher'].str.replace("  "," ")
+
+  # on retire tous les espaces en début et fin de Name
+  df.loc[:,'Name'] = df['Name'].str.strip()
+  df.loc[:,'Publisher'] = df['Publisher'].str.strip()
+
+  li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+  li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+  df['Type'] = np.where(df['Platform'].isin(li_salon), 'Salon', 'Portable')
+  df['Year'] = df['Year'].astype(int)
+
   st.write("### Modélisation")
   st.write("Suite à l'exploration initiale des données et nos premières constatations, nous ajoutons le type de plateforme Salon/Portable.")
   
@@ -208,6 +236,29 @@ if page == pages[2] :
   if afficher_code:
     st.code(code, language="python")
 
+  ### Définition de 'durée de vie' pour les Plateformes et les éditeurs
+  def assign_longevite(group):
+    plat_long = group.max() - group.min()
+    return plat_long
+  df['Game_Sales_Period'] = df.groupby('Platform')['Year'].transform(assign_longevite)
+
+  def assign_longevite(group):
+    plat_long = group.max() - group.min()
+    return plat_long
+
+  df['Publisher_Sales_Period'] = df.groupby('Publisher')['Year'].transform(assign_longevite)
+
+  #Création de combinaisons de variables
+  df['Pub_Plat'] = df['Publisher'] + '_' + df['Platform']
+  df['Pub_Genre'] = df['Publisher'] + '_' + df['Genre']
+  df['Plat_Year'] = df['Platform'] + '_' + df['Year'].astype(str)
+  df['Plat_Genre'] = df['Platform'] + '_' + df['Genre']
+  df['Genre_Year'] = df['Genre'] + '_' + df['Year'].astype(str)
+
+  df['PSP_x_GSP'] = df['Publisher_Sales_Period'] * df['Game_Sales_Period']
+
+
+  st.dataframe(df.head())
   
 
 
