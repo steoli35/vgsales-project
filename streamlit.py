@@ -27,7 +27,7 @@ from xgboost import XGBRegressor
 from scipy.special import inv_boxcox
 import shap
 
-
+st.set_page_config(layout="wide")
 st.title("ANALYSE EXPLORATOIRE ET MODELISATION DES VENTES GLOBALES DE JEUX VIDEO AVANT 2017")
 st.write("François Dumont, Thomas Bouffay, Olivier Steinbauer")
 st.sidebar.title("Sommaire")
