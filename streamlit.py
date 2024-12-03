@@ -27,7 +27,7 @@ from xgboost import XGBRegressor
 from scipy.special import inv_boxcox
 import shap
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="centered")
 
 st.title("ANALYSE EXPLORATOIRE ET MODELISATION DES VENTES GLOBALES DE JEUX VIDEO AVANT 2017")
 st.write("François Dumont, Thomas Bouffay, Olivier Steinbauer")
@@ -35,54 +35,7 @@ st.sidebar.title("Sommaire")
 pages=["Exploration", "DataVizualization", "Modélisation - base", "Machine Learning - base"]
 page=st.sidebar.radio("Aller vers", pages)
 
-########################################################## CODE POUR LES PAGES 2 ET 3 ##########
-df=pd.read_csv('cleaned_by_script_vgsales.csv')
 
-#on passe les Name en minuscules dans df_uvlist et df_no_year
-df.loc[:,'Name'] = df['Name'].str.lower()
-df.loc[:,'Publisher'] = df['Publisher'].str.lower()
-#on retire toutes les informations inutiles dans le nom de df_no_year elles sont entre parenthèses (JP sales)etc...
-df.loc[:,'Name'] = df['Name'].str.split('(').str[0]
-df.loc[:,'Publisher'] = df['Publisher'].str.split('(').str[0]
-
-# On ne conserve que les mots et les espaces dans les Names
-df.loc[:,'Name'] = df['Name'].apply(lambda x: re.sub(r'[^\w\s]','', x))
-df.loc[:,'Publisher'] = df['Publisher'].apply(lambda x: re.sub(r'[^\w\s]','', x))
-
-# on remplace les espaces doubles par des simples
-df.loc[:,'Name'] = df['Name'].str.replace("  "," ")
-df.loc[:,'Publisher'] = df['Publisher'].str.replace("  "," ")
-
-# on retire tous les espaces en début et fin de Name
-df.loc[:,'Name'] = df['Name'].str.strip()
-df.loc[:,'Publisher'] = df['Publisher'].str.strip()
-
-li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
-li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
-df['Type'] = np.where(df['Platform'].isin(li_salon), 'Salon', 'Portable')
-df['Year'] = df['Year'].astype(int)
-### Définition de 'durée de vie' pour les Plateformes et les éditeurs
-def assign_longevite(group):
-  plat_long = group.max() - group.min()
-  return plat_long
-df['Game_Sales_Period'] = df.groupby('Platform')['Year'].transform(assign_longevite)
-
-def assign_longevite(group):
-  plat_long = group.max() - group.min()
-  return plat_long
-
-df['Publisher_Sales_Period'] = df.groupby('Publisher')['Year'].transform(assign_longevite)
-
-#Création de combinaisons de variables
-df['Pub_Plat'] = df['Publisher'] + '_' + df['Platform']
-df['Pub_Genre'] = df['Publisher'] + '_' + df['Genre']
-df['Plat_Year'] = df['Platform'] + '_' + df['Year'].astype(str)
-df['Plat_Genre'] = df['Platform'] + '_' + df['Genre']
-df['Genre_Year'] = df['Genre'] + '_' + df['Year'].astype(str)
-
-df['PSP_x_GSP'] = df['Publisher_Sales_Period'] * df['Game_Sales_Period']
-
-############################################################################# FIN DU CODE POUR LES PAGES 2 ET 3 ########################################
 
 ####################################### PAGE 2 (MODELISATION (1)) ###################################
 if page == pages[2] : 
@@ -157,7 +110,7 @@ if page == pages[2] :
       )
       i+=1
 
-  fig.update_layout(width=1200,height=400)
+  fig.update_layout(width=800,height=400)
 
   # Afficher le graphique dans Streamlit
   st.plotly_chart(fig)
@@ -199,7 +152,7 @@ if page == pages[2] :
       )
       i+=1
 
-  fig.update_layout(width=1200,height=400)
+  fig.update_layout(width=800,height=400)
   st.write("Nous voyons l'effet de la 'normalisation' de la variable cible plus clairement sur les graphiques ci-dessous.")
   # Afficher le graphique dans Streamlit
   st.plotly_chart(fig)
@@ -219,11 +172,8 @@ if page == pages[2] :
   def assign_longevite(group):
     plat_long = group.max() - group.min()
     return plat_long
-  df['Game_Sales_Period'] = df.groupby('Platform')['Year'].transform(assign_longevite)
 
-  def assign_longevite(group):
-    plat_long = group.max() - group.min()
-    return plat_long
+  df['Game_Sales_Period'] = df.groupby('Platform')['Year'].transform(assign_longevite)
   df['Publisher_Sales_Period'] = df.groupby('Publisher')['Year'].transform(assign_longevite)
 
   df['Pub_Plat'] = df['Publisher'] + '_' + df['Platform']
@@ -264,6 +214,54 @@ if page == pages[2] :
 
 ####################################### PAGE 3 (MACHINE LEARNING (1)) ###################################
 if page == pages[3] :
+  ########################################################## CODE POUR LA PAGE 3 ##########
+  df=pd.read_csv('cleaned_by_script_vgsales.csv')
+
+  #on passe les Name en minuscules dans df_uvlist et df_no_year
+  df.loc[:,'Name'] = df['Name'].str.lower()
+  df.loc[:,'Publisher'] = df['Publisher'].str.lower()
+  #on retire toutes les informations inutiles dans le nom de df_no_year elles sont entre parenthèses (JP sales)etc...
+  df.loc[:,'Name'] = df['Name'].str.split('(').str[0]
+  df.loc[:,'Publisher'] = df['Publisher'].str.split('(').str[0]
+
+  # On ne conserve que les mots et les espaces dans les Names
+  df.loc[:,'Name'] = df['Name'].apply(lambda x: re.sub(r'[^\w\s]','', x))
+  df.loc[:,'Publisher'] = df['Publisher'].apply(lambda x: re.sub(r'[^\w\s]','', x))
+
+  # on remplace les espaces doubles par des simples
+  df.loc[:,'Name'] = df['Name'].str.replace("  "," ")
+  df.loc[:,'Publisher'] = df['Publisher'].str.replace("  "," ")
+
+  # on retire tous les espaces en début et fin de Name
+  df.loc[:,'Name'] = df['Name'].str.strip()
+  df.loc[:,'Publisher'] = df['Publisher'].str.strip()
+
+  li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+  li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+  df['Type'] = np.where(df['Platform'].isin(li_salon), 'Salon', 'Portable')
+  df['Year'] = df['Year'].astype(int)
+  ### Définition de 'durée de vie' pour les Plateformes et les éditeurs
+  def assign_longevite(group):
+    plat_long = group.max() - group.min()
+    return plat_long
+  df['Game_Sales_Period'] = df.groupby('Platform')['Year'].transform(assign_longevite)
+
+  def assign_longevite(group):
+    plat_long = group.max() - group.min()
+    return plat_long
+
+  df['Publisher_Sales_Period'] = df.groupby('Publisher')['Year'].transform(assign_longevite)
+
+  #Création de combinaisons de variables
+  df['Pub_Plat'] = df['Publisher'] + '_' + df['Platform']
+  df['Pub_Genre'] = df['Publisher'] + '_' + df['Genre']
+  df['Plat_Year'] = df['Platform'] + '_' + df['Year'].astype(str)
+  df['Plat_Genre'] = df['Platform'] + '_' + df['Genre']
+  df['Genre_Year'] = df['Genre'] + '_' + df['Year'].astype(str)
+
+  df['PSP_x_GSP'] = df['Publisher_Sales_Period'] * df['Game_Sales_Period']
+
+  ############################################################################# FIN DU CODE POUR LA PAGE 3 ########################################
   st.write("### Machine Learning - Données de base") 
   st.write("Nous allons procéder sur deux jeux de test et d'entrainement, un normalisé par Box-Cox et l'autre non.")
 
@@ -389,21 +387,9 @@ if page == pages[3] :
   X_train_scaled = scaler.fit_transform(X_train_scaled)
   X_test_scaled = scaler.transform(X_test_scaled)
 
-  # X_train_scaled = minmaxscaler.fit_transform(X_train_scaled)
-  # X_test_scaled = minmaxscaler.transform(X_test_scaled)
-
   ### X_non_scaled
   X_train_non_scaled = scaler.fit_transform(X_train_non_scaled)
   X_test_non_scaled = scaler.transform(X_test_non_scaled)
-
-  # X_train_non_scaled = minmaxscaler.fit_transform(X_train_non_scaled)
-  # X_test_non_scaled = minmaxscaler.transform(X_test_non_scaled)
-
-  # Charger les modèles
-  # rf_non_scaled = joblib.load('rf_non_scaled.joblib')
-  # rf_scaled = joblib.load('rf_scaled.joblib')
-  # xg_non_scaled = joblib.load('xg_non_scaled.joblib')
-  # xg_scaled = joblib.load('xg_scaled.joblib')
 
 
   # Titre de l'application
@@ -462,7 +448,7 @@ if page == pages[3] :
       st.write('RMSE (test):', rmse,'RMSE (train):', rmse_t, '\n')
       st.write('MedAE (test):', medae,'MedAE (train):', medae_t, '\n')
 
-      st.write('# Valeurs réelles VS Valeurs résiduelles:\n\n')
+      st.write('# Valeurs réelles - Valeurs résiduelles:\n\n')
 
       le_dict = {
         'Global_Sales': global_sales_lambda
@@ -472,30 +458,34 @@ if page == pages[3] :
 
       residuals = y_test['x0'] - y_pred
 
-      plt.figure(figsize=(10, 6))
-      plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      plt.axhline(y=0, color='r', linestyle='--')
-      plt.xlabel('Valeurs réelles')
-      plt.ylabel('Résidus')
-      plt.title('Résidus vs Valeurs réelles sur Test')
-      st.pyplot(plt)
+      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test['x0'], 'Valeurs Prédites': y_pred,'Residuals': residuals})
+      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)  
+      
 
-      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test['x0'], 'Valeurs Prédites': y_pred})
-      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)
-      st.dataframe(comparison_df.head(10))
+      #Création de 2 colonnes dans streamlit
+      col1, col2 = st.columns(2)
+      with col1:
+        st.write("10 plus petites valeurs réelles")
+        st.dataframe(comparison_df.head(10))
+      with col2:
+        st.write("10 plus grandes valeurs réelles")
+        st.dataframe(comparison_df.tail(10))
+       
       st.dataframe(comparison_df.describe())
-      # y_pred = inv_boxcox(result_train, [global_sales_lambda])
-      # y_test = inv_boxcox(y_train_scaled_trans, [global_sales_lambda])
+      
+      fig = px.scatter(comparison_df, y="Residuals", x="Valeurs Réelles")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
 
-      # residuals = y_test['x0'] - y_pred
-
-      # plt.figure(figsize=(10, 6))
-      # plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      # plt.axhline(y=0, color='r', linestyle='--')
-      # plt.xlabel('Valeurs réelles')
-      # plt.ylabel('Résidus')
-      # plt.title('Résidus vs Valeurs réelles sur Train')
-      # st.pyplot(plt)
+      st.write('# Valeurs réelles - Valeurs prédites:\n\n')
+      fig = px.scatter(comparison_df, x="Valeurs Réelles", y="Valeurs Prédites")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
+      
 
       st.write('# SHAP values:\n\n')
       shap_values_test = shap.TreeExplainer(model).shap_values(X_test_scaled)
@@ -506,13 +496,7 @@ if page == pages[3] :
       shap.summary_plot(shap_values_test, X_test_scaled_array, feature_names=X_test_scaled.columns)
       st.pyplot(plt)
 
-      # shap_values_test = shap.TreeExplainer(model).shap_values(X_train_scaled)
-
-      # # X_test_scaled_array = X_test_scaled
-      # X_train_scaled_array = X_train_scaled.values
-      # plt.figure()
-      # shap.summary_plot(shap_values_test, X_train_scaled_array, feature_names=X_train_scaled.columns)
-      # st.pyplot(plt)
+      
       st.write('# Matrice de corrélations:\n\n')
       y_pred = inv_boxcox(result_train, [global_sales_lambda])
       y_pred = pd.Series(result_train, name='Predictions', index=X_train_scaled.index)
@@ -558,46 +542,44 @@ if page == pages[3] :
 
       residuals = y_test['x0'] - y_pred
 
-      plt.figure(figsize=(10, 6))
-      plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      plt.axhline(y=0, color='r', linestyle='--')
-      plt.xlabel('Valeurs réelles')
-      plt.ylabel('Résidus')
-      plt.title('Résidus vs Valeurs réelles sur Test')
-      st.pyplot(plt)
-      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test['x0'], 'Valeurs Prédites': y_pred})
-      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)
-      st.dataframe(comparison_df.head(10))
+      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test['x0'], 'Valeurs Prédites': y_pred,'Residuals': residuals})
+      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)  
+      
+      col1, col2 = st.columns(2)
+      with col1:
+        st.write("10 plus petites valeurs")
+        st.dataframe(comparison_df.head(10))
+      with col2:
+        st.write("10 plus grandes valeurs")
+        st.dataframe(comparison_df.tail(10))
+        
       st.dataframe(comparison_df.describe())
-      # y_pred = inv_boxcox(result_train, [global_sales_lambda])
-      # y_test = inv_boxcox(y_train_scaled_trans, [global_sales_lambda])
 
-      # residuals = y_test['x0'] - y_pred
+      fig = px.scatter(comparison_df, y="Residuals", x="Valeurs Réelles")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
 
-      # plt.figure(figsize=(10, 6))
-      # plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      # plt.axhline(y=0, color='r', linestyle='--')
-      # plt.xlabel('Valeurs réelles')
-      # plt.ylabel('Résidus')
-      # plt.title('Résidus vs Valeurs réelles sur Train')
-      # st.pyplot(plt)
+      st.write('# Valeurs réelles - Valeurs prédites:\n\n')
+      fig = px.scatter(comparison_df, x="Valeurs Réelles", y="Valeurs Prédites")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
+      
+
+
 
       st.write('# SHAP values:\n\n')
       shap_values_test = shap.TreeExplainer(model).shap_values(X_test_scaled)
 
       X_test_scaled_array = X_test_scaled
       X_test_scaled_array = X_test_scaled.values
-      plt.figure()
-      shap.summary_plot(shap_values_test, X_test_scaled_array, feature_names=X_test_scaled.columns)
+      plt.figure(figsize=(6,12))
+      shap.summary_plot(shap_values_test, X_test_scaled_array, feature_names=X_test_scaled.columns,show=False)
       st.pyplot(plt)
 
-      # shap_values_test = shap.TreeExplainer(model).shap_values(X_train_scaled)
-
-      # # X_test_scaled_array = X_test_scaled
-      # X_train_scaled_array = X_train_scaled.values
-      # plt.figure()
-      # shap.summary_plot(shap_values_test, X_train_scaled_array, feature_names=X_train_scaled.columns)
-      # st.pyplot(plt)
       st.write('# Matrice de corrélations:\n\n')
       y_pred = inv_boxcox(result_train, [global_sales_lambda])
       y_pred = pd.Series(result_train, name='Predictions', index=X_train_scaled.index)
@@ -640,30 +622,35 @@ if page == pages[3] :
 
       residuals = y_test - y_pred
 
-      plt.figure(figsize=(10, 6))
-      plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      plt.axhline(y=0, color='r', linestyle='--')
-      plt.xlabel('Valeurs réelles')
-      plt.ylabel('Résidus')
-      plt.title('Résidus vs Valeurs réelles sur Test')
-      st.pyplot(plt)
-      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test, 'Valeurs Prédites': y_pred})
-      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)
-      st.dataframe(comparison_df.head(10))
+
+      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test, 'Valeurs Prédites': y_pred,'Residuals': residuals})
+      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)  
+
+      col1, col2 = st.columns(2)
+      with col1:
+        st.write("10 plus petites valeurs")
+        st.dataframe(comparison_df.head(10))
+      with col2:
+        st.write("10 plus grandes valeurs")
+        st.dataframe(comparison_df.tail(10))
+
       st.dataframe(comparison_df.describe())
-      # y_pred = inv_boxcox(result_train, [global_sales_lambda])
-      # y_test = inv_boxcox(y_train_scaled_trans, [global_sales_lambda])
+      
+      fig = px.scatter(comparison_df, y="Residuals", x="Valeurs Réelles")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
 
-      # residuals = y_test['x0'] - y_pred
+      st.write('# Valeurs réelles - Valeurs prédites:\n\n')
+      fig = px.scatter(comparison_df, x="Valeurs Réelles", y="Valeurs Prédites")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
 
-      # plt.figure(figsize=(10, 6))
-      # plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      # plt.axhline(y=0, color='r', linestyle='--')
-      # plt.xlabel('Valeurs réelles')
-      # plt.ylabel('Résidus')
-      # plt.title('Résidus vs Valeurs réelles sur Train')
-      # st.pyplot(plt)
-
+      
+      
       st.write('# SHAP values:\n\n')
       shap_values_test = shap.TreeExplainer(model).shap_values(X_test_non_scaled)
 
@@ -673,13 +660,6 @@ if page == pages[3] :
       shap.summary_plot(shap_values_test, X_test_non_scaled_array, feature_names=X_test_non_scaled.columns)
       st.pyplot(plt)
 
-      # shap_values_test = shap.TreeExplainer(model).shap_values(X_train_scaled)
-
-      # # X_test_scaled_array = X_test_scaled
-      # X_train_scaled_array = X_train_scaled.values
-      # plt.figure()
-      # shap.summary_plot(shap_values_test, X_train_scaled_array, feature_names=X_train_scaled.columns)
-      # st.pyplot(plt)
       st.write('# Matrice de corrélations:\n\n')
       y_pred = result_train
       y_pred = pd.Series(result_train, name='Predictions', index=X_train_scaled.index)
@@ -722,29 +702,33 @@ if page == pages[3] :
 
       residuals = y_test - y_pred
 
-      plt.figure(figsize=(10, 6))
-      plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      plt.axhline(y=0, color='r', linestyle='--')
-      plt.xlabel('Valeurs réelles')
-      plt.ylabel('Résidus')
-      plt.title('Résidus vs Valeurs réelles sur Test')
-      st.pyplot(plt)
-      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test, 'Valeurs Prédites': y_pred})
-      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)
-      st.dataframe(comparison_df.head(10))
+      comparison_df = pd.DataFrame({'Valeurs Réelles': y_test, 'Valeurs Prédites': y_pred,'Residuals': residuals})
+      comparison_df.sort_values(by='Valeurs Réelles',ascending=True, inplace=True)  
+
+      col1, col2 = st.columns(2)
+      with col1:
+        st.write("10 plus petites valeurs")
+        st.dataframe(comparison_df.head(10))
+      with col2:
+        st.write("10 plus grandes valeurs")
+        st.dataframe(comparison_df.tail(10))
+      
       st.dataframe(comparison_df.describe())
-      # y_pred = inv_boxcox(result_train, [global_sales_lambda])
-      # y_test = inv_boxcox(y_train_scaled_trans, [global_sales_lambda])
+      
+      fig = px.scatter(comparison_df, y="Residuals", x="Valeurs Réelles")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
 
-      # residuals = y_test['x0'] - y_pred
+      st.write('# Valeurs réelles - Valeurs prédites:\n\n')
+      fig = px.scatter(comparison_df, x="Valeurs Réelles", y="Valeurs Prédites")
+      
+      fig.update_layout(width=800,height=400)
+      
+      st.plotly_chart(fig)
 
-      # plt.figure(figsize=(10, 6))
-      # plt.scatter(y_test, residuals, alpha=0.3, color="g")
-      # plt.axhline(y=0, color='r', linestyle='--')
-      # plt.xlabel('Valeurs réelles')
-      # plt.ylabel('Résidus')
-      # plt.title('Résidus vs Valeurs réelles sur Train')
-      # st.pyplot(plt)
+      
 
       st.write('# SHAP values:\n\n')
       shap_values_test = shap.TreeExplainer(model).shap_values(X_test_non_scaled)
@@ -755,13 +739,6 @@ if page == pages[3] :
       shap.summary_plot(shap_values_test, X_test_non_scaled_array, feature_names=X_test_non_scaled.columns)
       st.pyplot(plt)
 
-      # shap_values_test = shap.TreeExplainer(model).shap_values(X_train_scaled)
-
-      # # X_test_scaled_array = X_test_scaled
-      # X_train_scaled_array = X_train_scaled.values
-      # plt.figure()
-      # shap.summary_plot(shap_values_test, X_train_scaled_array, feature_names=X_train_scaled.columns)
-      # st.pyplot(plt)
       st.write('# Matrice de corrélations:\n\n')
       y_pred = result_train
       y_pred = pd.Series(result_train, name='Predictions', index=X_train_scaled.index)
