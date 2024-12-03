@@ -38,7 +38,7 @@ page=st.sidebar.radio("Aller vers", pages)
 ####################################### PAGE 0 (EXPLORATION (0)) ###################################
 
 if page == pages[0] : 
-  st.write("## Exploration")
+  st.write("### Exploration")
 
   df = pd.read_csv("vgsales-original.csv")
   st.write("Celui-ci contient 16598 lignes de 0 à 16597 Il est composé de 3 types de données :<ul>", unsafe_allow_html=True)
@@ -50,7 +50,7 @@ if page == pages[0] :
   if afficher_code:
     st.dataframe(df.head(10))
     
-  st.write("## Constations")
+  st.write("### Constations")
 
   st.write("<ul><li>Valeurs manquantes pour la variable Year (271) et Publisher (58)</li><li>Valeurs Unknown (203) pour Publisher</li></ul>", unsafe_allow_html=True)
   afficher_dfunk = st.checkbox('Afficher les lignes en question')
@@ -58,7 +58,7 @@ if page == pages[0] :
     df_unknown = df.loc[(df['Publisher']=='Unknown')|(df['Publisher'].isna())|df['Year'].isna()]
     st.dataframe(df_unknown)
   
-  st.write("## WebScrapping")
+  st.write("### WebScrapping")
   st.write("Les données ont été récupérées et exportées dans des fichiers csv afin de pouvoir compléter les informations du jeu de données original")
   st.write("<ul><li>VGChartz - MetaCritic - UVLIST (scripts et csv en annexes du rendu final)</li></ul>", unsafe_allow_html=True)
   
@@ -138,7 +138,7 @@ if page == pages[0] :
     df_uvlist2 = pd.read_csv('base_uvlist2.csv')
     df_uvlist3 = pd.read_csv('base_uvlist3.csv')
     df_uvlist = pd.concat([df_uvlist0, df_uvlist1, df_uvlist2, df_uvlist3],ignore_index=True).drop(columns='Unnamed: 0')
-    df_uvlist['Year'] = df_uvlist['Year'].str.extract('(\d{4})').astype(float)
+    # df_uvlist['Year'] = df_uvlist['Year'].str.extract('(\d{4})').astype(float)
     df_uvlist['Name'] = df_uvlist['Name'].str.strip()
     df_uvlist['Platform'] = df_uvlist['Platform'].str.strip().astype(str)
     df_uvlist['Publisher'] = df_uvlist['Publisher'].str.strip()
@@ -191,7 +191,514 @@ if page == pages[0] :
     df_clean = pd.read_csv("cleaned_by_script_vgsales.csv")
     st.text(f"Fichier complété : {df_clean.shape[0]} lignes")
     st.dataframe(df_clean.head(50))
+######################################## PAGE 1 DATAVIZUALIZATION #################################################################
+if page == pages[1]:
+  st.write("### Evolution du nombre de jeux sortis par année")
+  df = pd.read_csv("cleaned_by_script_vgsales.csv")
+  fig = go.Figure()
+  fig.add_trace(go.Histogram(x=df.Year[df.Year.notna()],
+                            marker_color='darkorange',
+                            marker_line=dict(width=2, color='black')))
+  fig.update_layout(bargap=0.2, title='Évolution du nombre de jeux sortis par année',
+                    xaxis_title = "Année de sortie",
+                    yaxis_title = "Nombre de jeux",
+                    height = 500)
+  st.plotly_chart(fig)
 
+  st.write("### Comparaison du nombre de jeux sortis et celui du nombre de ventes médian par année de sortie")
+  fig, ax = plt.subplots(figsize=(15, 10))
+  sns.set_style("whitegrid", {'axes.grid' : False})
+  sns.lineplot(x='Year', y='Global_Sales', data=df, ax=ax, label='Nombre de ventes médian des jeux\n(en million)\nAvec la répartition inter-percentiles\n(2.5%-97.5%)', errorbar="pi", estimator="median")
+  sns.move_legend(ax, "upper left")
+  ax.set_xlabel('Année de sortie des jeux', labelpad = 15, fontsize = 16)
+  ax.set_ylabel('Nombre de ventes\n(en million)', labelpad = 15, fontsize = 16)
+  ax.set_title('Nombre de ventes médian des jeux par année de sortie\nNombre de jeux sortis par année', fontsize = 16);
+  ax2 = ax.twinx()
+  game_counts = df.Year.value_counts().sort_index()
+  # sns.lineplot(x=game_counts.index, y=game_counts.values, ax = ax2, label='Nombre de jeux sortis')
+  df.Year.value_counts().sort_index().plot(ax=ax2, color='orange', kind='area', alpha=0.2, legend = 'Nombre de jeux sortis')
+  # print(data_no_nan.Year.value_counts().sort_index())
+  # sns.countplot(x='Year', data=data_no_nan, ax=ax2, color ='red', alpha=0.2, edgecolor='black', label='Nombre de jeux')
+  # ax.sharex(ax2)
+  ax2.set_xlabel('')
+  ax2.set_ylabel('Nombre de jeux',  fontsize = 16)
+  ax2.legend(['Nombre de jeux sortis'], fontsize = 9)
+  st.pyplot(fig)
+
+  ################## GRAPH TOP 10 
+  st.write("### Top 10 des jeux par régions")
+  show_top_10 = st.checkbox("Afficher TOP 10 des jeux")
+  if show_top_10:
+    top10_EU = df[['Name', 'EU_Sales', 'Publisher', 'Genre']].sort_values(by='EU_Sales').tail(10)
+    top10_JP = df[['Name', 'JP_Sales', 'Publisher', 'Genre']].sort_values(by='JP_Sales').tail(10)
+    top10_NA = df[['Name', 'NA_Sales', 'Publisher', 'Genre']].sort_values(by='NA_Sales').tail(10)
+    top10_Other = df[['Name', 'Other_Sales', 'Publisher', 'Genre']].sort_values(by='Other_Sales').tail(10)
+    top10_Gl = df[['Name', 'Global_Sales', 'Publisher', 'Genre']].sort_values(by='Global_Sales').tail(10)
+
+    fig = make_subplots(rows=5, cols=1,
+                        subplot_titles=("Marché Européen",
+                                        "Marché Japonais",
+                                        "Marché Nord Américain",
+                                        "Marché autres région",
+                                        "Marché globale"))
+    fig.append_trace(
+        go.Bar(y=top10_EU["Name"],
+              x=top10_EU["EU_Sales"],
+              orientation='h',
+              text=top10_EU["Publisher"],
+              name='Europe'),
+        row=1, col=1,
+                )
+    fig.append_trace(
+        go.Bar(y=top10_JP["Name"],
+              x=top10_JP["JP_Sales"],
+              orientation='h',
+              text=top10_JP["Publisher"],
+              name='Japon'),
+        row=2, col=1
+                )
+    fig.append_trace(
+        go.Bar(y=top10_NA["Name"],
+              x=top10_NA["NA_Sales"],
+              orientation='h',
+              text=top10_NA["Publisher"],
+              name='Amérique du Nord'),
+        row=3, col=1
+                )
+    fig.append_trace(
+        go.Bar(y=top10_Other["Name"],
+              x=top10_Other["Other_Sales"],
+              orientation='h',
+              text=top10_Other["Publisher"],
+              name='Autres régions'),
+        row=4, col=1
+                )
+    fig.append_trace(
+        go.Bar(y=top10_Gl["Name"],
+              x=top10_Gl["Global_Sales"],
+              orientation='h',
+              text=top10_Gl["Publisher"],
+              name='Monde'),
+        row=5, col=1
+                )
+    fig.update_xaxes(title_text="Nombre de ventes (en million)", row=1, col=1)
+    fig.update_xaxes(title_text="Nombre de ventes (en million)", row=2, col=1)
+    fig.update_xaxes(title_text="Nombre de ventes (en million)", row=3, col=1)
+    fig.update_xaxes(title_text="Nombre de ventes (en million)", row=4, col=1)
+    fig.update_xaxes(title_text="Nombre de ventes (en million)", row=5, col=1)
+
+    fig.update_layout(title="Top 10 des jeux par nombre de ventes",
+                      xaxis_title="Nombre de ventes (en million)",
+                      height=2400,width=800)
+    st.plotly_chart(fig)
+  st.write("### Top 5 des éditeurs par régions")
+  show_top_10_pub = st.checkbox("Afficher TOP 5 des éditeurs")
+  if show_top_10_pub:
+    pie_data_gl = df.groupby('Publisher').sum().sort_values('Global_Sales', ascending=False).reset_index().head()
+    pie_data_na = df.groupby('Publisher').sum().sort_values('NA_Sales', ascending=False).reset_index().head()
+    pie_data_eu = df.groupby('Publisher').sum().sort_values('EU_Sales', ascending=False).reset_index().head()
+    pie_data_jp = df.groupby('Publisher').sum().sort_values('JP_Sales', ascending=False).reset_index().head()
+    pie_data_other = df.groupby('Publisher').sum().sort_values('Other_Sales', ascending=False).reset_index().head()
+
+    fig = make_subplots(rows=3, cols=2, specs=[[{'type':'domain'}, {'type':'domain'}], [{'type':'domain'}, {'type':'domain'}], [{'type':'domain'}, {'type':'domain'}]])
+
+    fig.add_trace(go.Pie(values=pie_data_na['NA_Sales'],
+                        labels=pie_data_na['Publisher'],
+                        pull=[0.15,0,0,0,0], ),
+                  1, 1)
+    fig.add_trace(go.Pie(values=pie_data_eu['EU_Sales'],
+                        labels=pie_data_eu['Publisher'],
+                        pull=[0.15,0,0,0,0], ),
+                  1, 2)
+    fig.add_trace(go.Pie(values=pie_data_jp['JP_Sales'],
+                        labels=pie_data_jp['Publisher'],
+                        pull=[0.15,0,0,0,0], ),
+                  2, 1)
+    fig.add_trace(go.Pie(values=pie_data_other['Other_Sales'],
+                        labels=pie_data_other['Publisher'],
+                        pull=[0.15,0,0,0,0], ),
+                  2, 2)
+    fig.add_trace(go.Pie(values=pie_data_gl['Global_Sales'],
+                        labels=pie_data_gl['Publisher'],
+                        pull=[0.15,0,0,0,0], ),
+                  3, 1)
+
+    fig.update_traces(hole=.3, hoverinfo="label+percent+name")
+
+    fig.update_layout(
+        title_text="Répartition du top 5 des éditeurs par region",
+        # Add annotations in the center of the donut pies.
+        annotations=[dict(text='NA', x=sum(fig.get_subplot(1, 1).x) / 2, y=(sum(fig.get_subplot(1, 1).y))*1.012 / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='EU', x=sum(fig.get_subplot(1, 2).x) / 2, y=(sum(fig.get_subplot(1, 2).y))*1.012 / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='JP', x=sum(fig.get_subplot(2, 1).x) / 2, y=sum(fig.get_subplot(2, 1).y) / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='Other', x=sum(fig.get_subplot(2, 2).x) / 2, y=sum(fig.get_subplot(2, 2).y) / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='Global', x=sum(fig.get_subplot(3, 1).x) / 2, y=(sum(fig.get_subplot(3, 1).y))*0.98 / 2,
+                          font_size=20, showarrow=False, xanchor="center")],
+        height=1300, width=800)
+    st.plotly_chart(fig)
+  st.write("### Top 5 des plateformes par régions")
+  show_top_10_plat = st.checkbox("Afficher TOP 5 des plateformes")
+  if show_top_10_plat:
+    pie_data_gl = df.groupby('Platform').sum().sort_values('Global_Sales', ascending=False).reset_index().head()
+    pie_data_na = df.groupby('Platform').sum().sort_values('NA_Sales', ascending=False).reset_index().head()
+    pie_data_eu = df.groupby('Platform').sum().sort_values('EU_Sales', ascending=False).reset_index().head()
+    pie_data_jp = df.groupby('Platform').sum().sort_values('JP_Sales', ascending=False).reset_index().head()
+    pie_data_other = df.groupby('Platform').sum().sort_values('Other_Sales', ascending=False).reset_index().head()
+
+    fig = make_subplots(rows=3, cols=2, specs=[[{'type':'domain'}, {'type':'domain'}], [{'type':'domain'}, {'type':'domain'}], [{'type':'domain'}, {'type':'domain'}]])
+
+    fig.add_trace(go.Pie(values=pie_data_na['NA_Sales'],
+                        labels=pie_data_na['Platform'],
+                        pull=[0.15,0,0,0,0], ),
+                  1, 1)
+    fig.add_trace(go.Pie(values=pie_data_eu['EU_Sales'],
+                        labels=pie_data_eu['Platform'],
+                        pull=[0.15,0,0,0,0], ),
+                  1, 2)
+    fig.add_trace(go.Pie(values=pie_data_jp['JP_Sales'],
+                        labels=pie_data_jp['Platform'],
+                        pull=[0.15,0,0,0,0], ),
+                  2, 1)
+    fig.add_trace(go.Pie(values=pie_data_other['Other_Sales'],
+                        labels=pie_data_other['Platform'],
+                        pull=[0.15,0,0,0,0], ),
+                  2, 2)
+    fig.add_trace(go.Pie(values=pie_data_gl['Global_Sales'],
+                        labels=pie_data_gl['Platform'],
+                        pull=[0.15,0,0,0,0], ),
+                  3, 1)
+
+    fig.update_traces(hole=.3, hoverinfo="label+percent+name")
+
+    fig.update_layout(
+        title_text="Répartition du top 5 des platforme par région",
+        # Add annotations in the center of the donut pies.
+        annotations=[dict(text='NA', x=sum(fig.get_subplot(1, 1).x) / 2, y=(sum(fig.get_subplot(1, 1).y))*1.012 / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='EU', x=sum(fig.get_subplot(1, 2).x) / 2, y=(sum(fig.get_subplot(1, 2).y))*1.012 / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='JP', x=sum(fig.get_subplot(2, 1).x) / 2, y=sum(fig.get_subplot(2, 1).y) / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='Other', x=sum(fig.get_subplot(2, 2).x) / 2, y=sum(fig.get_subplot(2, 2).y) / 2,
+                          font_size=20, showarrow=False, xanchor="center"),
+                    dict(text='Global', x=sum(fig.get_subplot(3, 1).x) / 2, y=(sum(fig.get_subplot(3, 1).y))*0.98 / 2,
+                          font_size=20, showarrow=False, xanchor="center")],
+        height=1300, width=800)
+    st.plotly_chart(fig)
+  st.write("### Ventes globales (distinction du type de plateforme)")
+  show_top_glob_sales = st.checkbox("Afficher les ventes globales par type de plateforme")
+  if show_top_glob_sales:
+    df_vgchartz = pd.read_csv('cleaned_by_script_vgsales.csv')
+    df_vgchartz['Platform'].unique()
+    li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+    li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+
+    df_vgchartz['Type'] = np.where(df_vgchartz['Platform'].isin(li_salon), 'Salon', 'Portable')
+
+    df_vgchartz['Year'] = df_vgchartz['Year'].astype(int)
+    platform_count = df_vgchartz['Platform'].value_counts()
+    platform_count.columns = ['Platform','Count']
+    valides_platform = platform_count[platform_count >= 34].index
+
+    df_vgchartz_filter_platform = df_vgchartz[df_vgchartz['Platform'].isin(valides_platform)]
+
+    df_plat_type_global_sales = df_vgchartz_filter_platform.groupby(['Type','Platform'])['Global_Sales'].sum().reset_index().sort_values(by='Global_Sales', ascending=False)
+
+    df_salon_sales = df_plat_type_global_sales.loc[df_plat_type_global_sales['Type'] == "Salon"]
+    df_portable_sales = df_plat_type_global_sales.loc[df_plat_type_global_sales['Type'] == "Portable"]
+
+    fig = make_subplots(rows=2, cols=1, subplot_titles=("Ventes mondiales",))
+
+    fig.add_trace(go.Bar(y = df_salon_sales["Global_Sales"], x = df_salon_sales["Platform"],name="Consoles de salon",text=round(df_salon_sales["Global_Sales"],2), textposition='auto'), row=1, col=1)
+    fig.add_trace(go.Bar(y = df_portable_sales["Global_Sales"], x = df_portable_sales["Platform"],name="Consoles portables",text=round(df_portable_sales["Global_Sales"],2), textposition='auto'), row=2, col=1)
+    fig.update_layout(width=800,height=800,title_text="Ventes globales de jeux par type d'équipment (en millions de copies vendues)")
+    st.plotly_chart(fig)
+  st.write("### Ventes régionales de jeux par type de support")
+  show_top_reg_sales = st.checkbox("Afficher les ventes régionales de jeux par type de support")
+  if show_top_reg_sales:
+    df_vgchartz = pd.read_csv('cleaned_by_script_vgsales.csv')
+    df_vgchartz['Platform'].unique()
+    li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+    li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+
+    df_vgchartz['Type'] = np.where(df_vgchartz['Platform'].isin(li_salon), 'Salon', 'Portable')
+
+    df_vgchartz['Year'] = df_vgchartz['Year'].astype(int)
+    platform_count = df_vgchartz['Platform'].value_counts()
+    platform_count.columns = ['Platform','Count']
+    valides_platform = platform_count[platform_count >= 34].index
+
+    df_vgchartz_filter_platform = df_vgchartz[df_vgchartz['Platform'].isin(valides_platform)]
+    df_plat_na_sales = df_vgchartz_filter_platform.groupby(['Type','Platform'])['NA_Sales'].sum().reset_index().sort_values(by='NA_Sales', ascending=True)
+    df_plat_eu_sales = df_vgchartz_filter_platform.groupby(['Type','Platform'])['EU_Sales'].sum().reset_index().sort_values(by='EU_Sales', ascending=True)
+    df_plat_jp_sales = df_vgchartz_filter_platform.groupby(['Type','Platform'])['JP_Sales'].sum().reset_index().sort_values(by='JP_Sales', ascending=True)
+    df_plat_other_sales = df_vgchartz_filter_platform.groupby(['Type','Platform'])['Other_Sales'].sum().reset_index().sort_values(by='Other_Sales', ascending=True)
+
+    df_salon_na_sales = df_plat_na_sales.loc[df_plat_na_sales['Type'] == "Salon"]
+    df_portable_na_sales = df_plat_na_sales.loc[df_plat_na_sales['Type'] == "Portable"]
+
+    df_salon_eu_sales = df_plat_eu_sales.loc[df_plat_eu_sales['Type'] == "Salon"]
+    df_portable_eu_sales = df_plat_eu_sales.loc[df_plat_eu_sales['Type'] == "Portable"]
+
+    df_salon_jp_sales = df_plat_jp_sales.loc[df_plat_jp_sales['Type'] == "Salon"]
+    df_portable_jp_sales = df_plat_jp_sales.loc[df_plat_jp_sales['Type'] == "Portable"]
+
+    df_salon_other_sales = df_plat_other_sales.loc[df_plat_other_sales['Type'] == "Salon"]
+    df_portable_other_sales = df_plat_other_sales.loc[df_plat_other_sales['Type'] == "Portable"]
+
+    fig = make_subplots(rows=4, cols=1, subplot_titles=("Ventes en Amérique du Nord", "Ventes en Europe", "Ventes au Japon", "Ventes dans les autres régions"))
+
+    fig.add_trace(go.Bar(y = df_salon_na_sales["NA_Sales"], x = df_salon_na_sales["Platform"],name="Ventes NA",
+             text=round(df_salon_na_sales["NA_Sales"],2), textposition='auto'), row=1, col=1)
+    fig.add_trace(go.Bar(y = df_salon_eu_sales["EU_Sales"], x = df_salon_eu_sales["Platform"],name="Ventes EU",
+              text=round(df_salon_eu_sales["EU_Sales"],2), textposition='auto'), row=2, col=1)
+    fig.add_trace(go.Bar(y = df_salon_jp_sales["JP_Sales"], x = df_salon_jp_sales["Platform"],name="Ventes JP",
+              text=round(df_salon_jp_sales["JP_Sales"],2), textposition='auto'), row=3, col=1)
+    fig.add_trace(go.Bar(y = df_salon_other_sales["Other_Sales"], x = df_salon_other_sales["Platform"],name="Ventes autres régions",
+              text=round(df_salon_other_sales["Other_Sales"],2), textposition='auto'), row=4, col=1)
+
+    fig.update_layout(width=800,height=1200,title_text="Ventes régionales de jeux sur équipments de salons (en millions de copies vendues)")
+    st.plotly_chart(fig)
+
+    fig = make_subplots(rows=2, cols=2, subplot_titles=("Ventes en Amérique du Nord", "Ventes en Europe", "Ventes au Japon", "Ventes dans les autres régions"))
+
+    fig.add_trace(go.Bar(y = df_portable_na_sales["NA_Sales"], x = df_portable_na_sales["Platform"],name="Ventes NA",text=round(df_portable_na_sales["NA_Sales"],2), textposition='auto'), row=1, col=1)
+    fig.add_trace(go.Bar(y = df_portable_eu_sales["EU_Sales"], x = df_portable_eu_sales["Platform"],name="Ventes EU",text=round(df_portable_eu_sales["EU_Sales"],2), textposition='auto'), row=1, col=2)
+    fig.add_trace(go.Bar(y = df_portable_jp_sales["JP_Sales"], x = df_portable_jp_sales["Platform"],name="Ventes JP",text=round(df_portable_jp_sales["JP_Sales"],2), textposition='auto'), row=2, col=1)
+    fig.add_trace(go.Bar(y = df_portable_other_sales["Other_Sales"], x = df_portable_other_sales["Platform"],name="Ventes autres régions",text=round(df_portable_other_sales["Other_Sales"],2), textposition='auto'), row=2, col=2)
+
+    fig.update_layout(width=800,height=800,title_text="Ventes régionales de jeux sur équipements portables (en millions de copies vendues)")
+    st.plotly_chart(fig)
+  st.markdown("### Volume de jeux édités par plateforme au fil du temps pour le type Salon")
+  show_top_vol_sales = st.checkbox("Afficher les volumes de jeux édités par plateforme au fil du temps (Salon)")
+  if show_top_vol_sales:
+    df_vgchartz = pd.read_csv('cleaned_by_script_vgsales.csv')
+    df_vgchartz['Platform'].unique()
+    li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+    li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+
+    df_vgchartz['Type'] = np.where(df_vgchartz['Platform'].isin(li_salon), 'Salon', 'Portable')
+
+    df_vgchartz['Year'] = df_vgchartz['Year'].astype(int)
+    platform_count = df_vgchartz['Platform'].value_counts()
+    platform_count.columns = ['Platform','Count']
+    valides_platform = platform_count[platform_count >= 34].index
+
+    df_vgchartz_filter_platform = df_vgchartz[df_vgchartz['Platform'].isin(valides_platform)]
+    df_plat_year_count = df_vgchartz_filter_platform.groupby(['Type','Platform', 'Year']).size().reset_index(name='Count').sort_values(by='Count', ascending=True)
+
+    df_salon_sales = df_plat_year_count.loc[df_plat_year_count['Type'] == "Salon"].sort_values(by='Year', ascending=True)
+
+    #vu le nombre de plateforme il faut rajouter plusieurs palettes de couleurs
+    #color_sequence = px.colors.qualitative.Dark2 + px.colors.qualitative.Vivid
+
+    fig = px.bar(df_salon_sales,
+                y='Platform', x='Count',
+                orientation="h",
+                hover_data=['Platform', 'Year'], color='Year',
+                labels={'Platform'}, height=800, width=800,
+                color_continuous_scale=px.colors.sequential.Inferno)
+
+
+    fig.update_layout(
+        title='Volume de jeux édités par plateforme au fil du temps pour le type Salon',
+        xaxis_tickfont_size=14,
+        yaxis=dict(
+            title=dict(
+                text="Plateformes de salon",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+        legend=dict(
+            x=0,
+            y=1,
+            bgcolor='rgba(255, 255, 255, 0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+            ),
+        xaxis=dict(
+            title=dict(
+                text="Nbre de Jeux publiés",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+
+        )
+    st.plotly_chart(fig)
+  st.write("### Volume de jeux édités par plateforme au fil du temps pour le type Portable")
+  show_top_volp_sales = st.checkbox("Afficher les volumes de jeux édités par plateforme au fil du temps (Portable)")
+  if show_top_volp_sales:
+    df_vgchartz = pd.read_csv('cleaned_by_script_vgsales.csv')
+    df_vgchartz['Platform'].unique()
+    li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+    li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+
+    df_vgchartz['Type'] = np.where(df_vgchartz['Platform'].isin(li_salon), 'Salon', 'Portable')
+
+    df_vgchartz['Year'] = df_vgchartz['Year'].astype(int)
+    platform_count = df_vgchartz['Platform'].value_counts()
+    platform_count.columns = ['Platform','Count']
+    valides_platform = platform_count[platform_count >= 34].index
+
+    df_vgchartz_filter_platform = df_vgchartz[df_vgchartz['Platform'].isin(valides_platform)]
+    df_plat_year_count = df_vgchartz_filter_platform.groupby(['Type','Platform', 'Year']).size().reset_index(name='Count').sort_values(by='Count', ascending=False)
+
+    df_portable_sales = df_plat_year_count.loc[df_plat_year_count['Type'] == "Portable"].sort_values(by='Year', ascending=True)
+
+    #vu le nombre de plateforme il faut rajouter plusieurs palettes de couleurs
+    #color_sequence = px.colors.qualitative.Dark2
+
+    fig = px.bar(df_portable_sales,
+                y='Platform', x='Count',
+                hover_data=['Platform', 'Year'], color='Year',
+                labels={'Platform'}, height=800, width=800,orientation="h",
+                color_continuous_scale=px.colors.sequential.Inferno)
+
+
+    fig.update_layout(
+        title='Volume de jeux édités par plateforme au fil du temps pour le type portable',
+        xaxis_tickfont_size=14,
+        yaxis=dict(
+            title=dict(
+                text="Plateformes portables",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+        legend=dict(
+            x=0,
+            y=1,
+            bgcolor='rgba(255, 255, 255, 0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+            ),
+        xaxis=dict(
+            title=dict(
+                text="Nbre de Jeux publiés",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+
+        )
+    st.plotly_chart(fig)
+  st.write("### Durée moyenne du marché de développement d'un jeu sur une plateforme")
+  show_top_vie = st.checkbox("Durée moyenne du marché de développement d'un jeu")
+  if show_top_vie:
+    df_vgchartz = pd.read_csv('cleaned_by_script_vgsales.csv')
+    df_vgchartz['Platform'].unique()
+    li_salon = ['Wii','NES','X360','PS3','PS2','SNES','PS4','N64','PS','XB','PC','2600','XOne','GC','GEN','DC','SAT','SCD','NG','TG16','3DO','PCFX']
+    li_portable = ['GB','DS','GBA','3DS','PSP','WiiU','PSV','WS','GG']
+
+    df_vgchartz['Type'] = np.where(df_vgchartz['Platform'].isin(li_salon), 'Salon', 'Portable')
+
+    df_vgchartz['Year'] = df_vgchartz['Year'].astype(int)
+    platform_count = df_vgchartz['Platform'].value_counts()
+    platform_count.columns = ['Platform','Count']
+    valides_platform = platform_count[platform_count >= 34].index
+
+    df_vgchartz_filter_platform = df_vgchartz[df_vgchartz['Platform'].isin(valides_platform)]
+    df_plat_year_count = df_vgchartz_filter_platform.groupby(['Type','Platform', 'Year']).size().reset_index(name='Count').sort_values(by='Count', ascending=False)
+    df_salon_sales = df_plat_year_count.loc[df_plat_year_count['Type'] == "Salon"].sort_values(by='Year', ascending=False)
+
+    #on va compter le nombre d'années par Platform
+    df_salon_year_count = df_salon_sales.groupby(['Platform']).size().reset_index(name='Count').sort_values(by='Count', ascending=False)
+
+    fig = px.bar(df_salon_year_count,
+                y='Platform', x='Count',
+                hover_data=['Platform', 'Count'],
+                color='Count',
+                labels={'Platform'}, height=800, width=800,orientation="h",
+                color_continuous_scale=px.colors.sequential.Inferno)
+
+
+    fig.update_layout(
+        title='durée moyenne du marché de développement d\'un jeu sur une plateforme',
+        xaxis_tickfont_size=14,
+        yaxis=dict(
+            title=dict(
+                text="Plateformes de salon",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+        legend=dict(
+            x=0,
+            y=1,
+            bgcolor='rgba(255, 255, 255, 0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+            ),
+        xaxis=dict(
+            title=dict(
+                text="Nbre années",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+
+        )
+    st.plotly_chart(fig)
+    df_plat_year_count = df_vgchartz.groupby(['Type','Platform', 'Year']).size().reset_index(name='Count').sort_values(by='Year', ascending=False)
+
+    df_portable_sales = df_plat_year_count.loc[df_plat_year_count['Type'] == "Portable"].sort_values(by='Year', ascending=False)
+
+    #on va compter le nombre d'années par Platform
+    df_portable_year_count = df_portable_sales.groupby(['Platform']).size().reset_index(name='Count').sort_values(by='Count', ascending=False)
+
+    fig = px.bar(df_portable_year_count,
+                y='Platform', x='Count',
+                hover_data=['Platform', 'Count'],
+                color='Count',
+                labels={'Platform'}, height=800, width=800,orientation="h",
+                color_continuous_scale=px.colors.sequential.Inferno)
+
+
+    fig.update_layout(
+        title='durée moyenne du marché de développement d\'un jeu sur une plateforme',
+        xaxis_tickfont_size=14,
+        yaxis=dict(
+            title=dict(
+                text="Plateformes Portables",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+        legend=dict(
+            x=0,
+            y=1,
+            bgcolor='rgba(255, 255, 255, 0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+            ),
+        xaxis=dict(
+            title=dict(
+                text="Nbre années",
+                font=dict(
+                    size=16
+                    )
+                ),
+            tickfont_size=14,
+            ),
+
+        )
+    st.plotly_chart(fig)
 ####################################### PAGE 2 (MODELISATION (BASE)) ###################################
 if page == pages[2] : 
 
@@ -241,7 +748,7 @@ if page == pages[2] :
 
   ### PARTIE 2 - étude la répartition de Global_Sales
 
-  st.write("## Répartition de la variable Global_Sales")
+  st.write("### Répartition de la variable Global_Sales")
   st.write("Les différents modèles que nous avons essayés lors de notre première tentative renvoyait des résultats nuls ou négatifs, quelques fussent les variations !")
   st.write("Il est apparu clair que la distribution de la variable cible empêchait toute modélisation, à notre niveau comme on peut le voir ci-dessous.")
 
@@ -274,7 +781,7 @@ if page == pages[2] :
 
   ### PARTIE 3
   ### APPLICATION DE LA METHODE BOX-COX ET VISUALISATION DE LA TRANSFORMATION
-  st.write("## Application de la méthode Box-Cox sur la variable cible")
+  st.write("### Application de la méthode Box-Cox sur la variable cible")
   st.write("Cette méthode est employée car nous n'avons aucune valeur négative, autrement il eut fallu utiliser la méthode Yeo-Johnson qui supporte de telles valeurs.")
 
   pt = PowerTransformer(method='box-cox',standardize=False)
@@ -316,7 +823,7 @@ if page == pages[2] :
 
   ### PARTIE 4
   ### FEATURE ENGINEERING, CREATION DE NOUVELLES VARIABLES
-  st.write("## Feature Engineering à partir des données de base")
+  st.write("### Feature Engineering à partir des données de base")
   st.write("Compte tenu du nombre limité de variables à disposition, nous avons essayé d'en ajouter de nouvelles à partir des existantes.")
   st.write("Période d'existence au sein du jeu de données des éditeurs et des plateformes ainsi que des associations potentiellement utiles.")
   
@@ -505,7 +1012,7 @@ if page == pages[3] :
   X_test_non_scaled['Plat_x_GSP'] = X_test_non_scaled['Platform'] * X_test_non_scaled['Game_Sales_Period']
 
   ### FEATURE ENGINEERING, CREATION DE NOUVELLES VARIABLES
-  st.write("## Feature Engineering à partir des données de base")
+  st.write("### Feature Engineering à partir des données de base")
   st.write("Compte tenu du nombre limité de variables à disposition, nous avons essayé d'en ajouter de nouvelles à partir des existantes.")
   st.write("Une fois l'encodage réalisé")
   
