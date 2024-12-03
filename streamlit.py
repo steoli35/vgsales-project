@@ -32,12 +32,167 @@ st.set_page_config(layout="centered")
 st.title("ANALYSE EXPLORATOIRE ET MODELISATION DES VENTES GLOBALES DE JEUX VIDEO AVANT 2017")
 st.write("François Dumont, Thomas Bouffay, Olivier Steinbauer")
 st.sidebar.title("Sommaire")
-pages=["Exploration", "DataVizualization", "Modélisation - base", "Machine Learning - base"]
+pages=["Exploration / Webscraping", "DataVizualization", "Modélisation - base", "Machine Learning - base"]
 page=st.sidebar.radio("Aller vers", pages)
 
+####################################### PAGE 0 (EXPLORATION (0)) ###################################
+
+if page == pages[0] : 
+  st.write("## Exploration")
+
+  df = pd.read_csv("vgsales-original.csv")
+  st.write("Celui-ci contient 16598 lignes de 0 à 16597 Il est composé de 3 types de données :<ul>", unsafe_allow_html=True)
+  st.write("<li>6 colonnes de type float (Year, NA_Sales, EU_Sales, JP_Sales, Other_Sales et Global_Sales)</li>", unsafe_allow_html=True)
+  st.write("<li>1 colonne de type int (Rank)</li>", unsafe_allow_html=True)
+  st.write("<li>4 colonnes de type object (Name, Platform, Genre et Publisher)</li></ul><br>", unsafe_allow_html=True)
+  afficher_code = st.checkbox('Afficher les premières lignes du jeu de données original')
+
+  if afficher_code:
+    st.dataframe(df.head(10))
+    
+  st.write("## Constations")
+
+  st.write("<ul><li>Valeurs manquantes pour la variable Year (271) et Publisher (58)</li><li>Valeurs Unknown (203) pour Publisher</li></ul>", unsafe_allow_html=True)
+  afficher_dfunk = st.checkbox('Afficher les lignes en question')
+  if afficher_dfunk:
+    df_unknown = df.loc[(df['Publisher']=='Unknown')|(df['Publisher'].isna())|df['Year'].isna()]
+    st.dataframe(df_unknown)
+  
+  st.write("## WebScrapping")
+  st.write("Les données ont été récupérées et exportées dans des fichiers csv afin de pouvoir compléter les informations du jeu de données original")
+  st.write("<ul><li>VGChartz - MetaCritic - UVLIST (scripts et csv en annexes du rendu final)</li></ul>", unsafe_allow_html=True)
+  
+  afficher_vg =  st.checkbox('Afficher les données VGChartz')
+  
+  if afficher_vg:
+    df_vg = pd.read_csv("vgsales_new.csv")
+    st.text(f"VGChartz : {df_vg.shape[0]} lignes")
+    st.dataframe(df_vg.head(50))
+    df_plat_count = df["Platform"].value_counts().reset_index()
+    df_plat_count.columns = ["Platform", "nb_games_origine"]
+    df_vg_plat_count = df_vg["Platform"].value_counts().reset_index()
+    df_vg_plat_count.columns = ["Platform", "nb_games_scrap"]
+
+    df_both = df_plat_count.merge(df_vg_plat_count, on="Platform", how="outer")
+    df_both = df_both.loc[df_both["nb_games_origine"].notna()]
+    st.dataframe(df_both)
+    df_both['Platform'] = df_both['Platform'].astype(str).astype('category')
+
+    fig = px.bar(df_both, y='Platform', x='nb_games_scrap', text_auto='.2s',
+             hover_data=['nb_games_origine', 'nb_games_scrap'], color='nb_games_origine',
+             labels={'Nb jeux':'Jeux par plateforme'},height=800)
+    fig.update_layout(barmode='group')
+    fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+    fig.update_layout(xaxis_title="Platform", yaxis_title="Nombre de jeux")
+    st.plotly_chart(fig)
+
+  afficher_meta = st.checkbox('Afficher les données MetaCritic')
+  
+  if afficher_meta:
+    df_meta = pd.read_csv('Scores_Metacritic_V2.csv')
+    update_platform_name = {'Dreamcast': 'DC',
+                        'Game Boy Advance': 'GBA',
+                        'GameCube': 'GC',
+                        'Meta Quest': 'MQ',
+                        'Nintendo 64': 'N64',
+                        'Nintendo Switch': 'SWITCH',
+                        'PlayStation' : 'PS',
+                        'PlayStation 2': 'PS2',
+                        'PlayStation 3': 'PS3',
+                        'PlayStation 4': 'PS4',
+                        'PlayStation 5': 'PS5',
+                        'PlayStation Vita': 'PSV',
+                        'Wii': 'Wii',
+                        'Wii U': 'WiiU',
+                        'Xbox': 'XB',
+                        'Xbox 360': 'X360',
+                        'Xbox One': 'XOne',
+                        'Xbox Series X': 'XBSX',
+                        'iOS (iPhone/iPad)': 'IOS'}
+    df_meta.Platform = df_meta.Platform.replace(update_platform_name)
+    # np.sort(df_meta.Platform.unique()), np.sort(df_meta.Platform.unique())
+    st.text(f"MetaCritic : {df_meta.shape[0]} lignes")
+    st.dataframe(df_meta.head(50))
+    df_plat_count = df["Platform"].value_counts().reset_index()
+    df_plat_count.columns = ["Platform", "nb_games_origine"]
+    df_meta_plat_count = df_meta["Platform"].value_counts().reset_index()
+    df_meta_plat_count.columns = ["Platform", "nb_games_scrap"]
+
+    df_both = df_plat_count.merge(df_meta_plat_count, on="Platform", how="outer")
+    df_both = df_both.loc[df_both["nb_games_origine"].notna()]
+    st.dataframe(df_both)
+    df_both['Platform'] = df_both['Platform'].astype(str).astype('category')
+    
+    fig = px.bar(df_both, y='Platform', x='nb_games_scrap', text_auto='.2s',
+             hover_data=['nb_games_origine', 'nb_games_scrap'], color='nb_games_origine',
+             labels={'Nb jeux':'Jeux par plateforme'},height=800)
+    fig.update_layout(barmode='group')
+    fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+    fig.update_layout(xaxis_title="Platform", yaxis_title="Nombre de jeux")
+    st.plotly_chart(fig)
+
+  afficher_uvlist = st.checkbox('Afficher les données UVLIST')
+  if afficher_uvlist:
+    df_uvlist0 = pd.read_csv('base_uvlist.csv')
+    df_uvlist1 = pd.read_csv('base_uvlist1.csv')
+    df_uvlist2 = pd.read_csv('base_uvlist2.csv')
+    df_uvlist3 = pd.read_csv('base_uvlist3.csv')
+    df_uvlist = pd.concat([df_uvlist0, df_uvlist1, df_uvlist2, df_uvlist3],ignore_index=True).drop(columns='Unnamed: 0')
+    df_uvlist['Year'] = df_uvlist['Year'].str.extract('(\d{4})').astype(float)
+    df_uvlist['Name'] = df_uvlist['Name'].str.strip()
+    df_uvlist['Platform'] = df_uvlist['Platform'].str.strip().astype(str)
+    df_uvlist['Publisher'] = df_uvlist['Publisher'].str.strip()
+    #on itialise deux listes de correspondances pour remplacer les valeurs de uvlist par celles de vgchartz
+    uvlist_platforms = ['Wii','NES','GB','Nintendo DS','X360','PS3','PS2','SNES','GBA',
+                        '3DS','PS4','N64','PS','Xbox','Windows','Atari 2600','PSP','Xbox One','GameCube',
+                        'Wii U','Mega Drive','Dreamcast','PS Vita','Saturn','Mega-CD','WonderSwan','Neo-Geo','PC Engine',
+                        '3DO','Game Gear','PC-FX']
+
+    vgchartz_platforms = ['Wii', 'NES', 'GB', 'DS', 'X360', 'PS3', 'PS2', 'SNES', 'GBA',
+                          '3DS', 'PS4', 'N64', 'PS', 'XB', 'PC', '2600', 'PSP', 'XOne', 'GC',
+                          'WiiU', 'GEN', 'DC', 'PSV', 'SAT', 'SCD', 'WS', 'NG', 'TG16',
+                          '3DO', 'GG', 'PCFX']
+
+    #on remplace dans uvlist par les valeurs de Platform de vgchartz
+    df_uvlist['Platform'] = df_uvlist['Platform'].replace(uvlist_platforms, vgchartz_platforms)
+
+    df_uvlist = df_uvlist.dropna(subset=['Year', 'Publisher'], how='any')
+
+    st.text(f"UVLIST : {df_uvlist.shape[0]} lignes")
+    st.dataframe(df_uvlist.head(50))
+    df_plat_count = df["Platform"].value_counts().reset_index()
+    df_plat_count.columns = ["Platform", "nb_games_origine"]
+    df_uvlist_plat_count = df_uvlist["Platform"].value_counts().reset_index()
+    df_uvlist_plat_count.columns = ["Platform", "nb_games_scrap"]
+
+    df_both = df_plat_count.merge(df_uvlist_plat_count, on="Platform", how="outer")
+    df_both = df_both.loc[df_both["nb_games_origine"].notna()]
+    st.dataframe(df_both)
+    df_both['Platform'] = df_both['Platform'].astype(str).astype('category')
+    
+    fig = px.bar(df_both, y='Platform', x='nb_games_scrap', text_auto='.2s',
+             hover_data=['nb_games_origine', 'nb_games_scrap'], color='nb_games_origine',
+             labels={'Nb jeux':'Jeux par plateforme'},height=800)
+    fig.update_layout(barmode='group')
+    fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+    fig.update_layout(xaxis_title="Platform", yaxis_title="Nombre de jeux")
+    st.plotly_chart(fig)
 
 
-####################################### PAGE 2 (MODELISATION (1)) ###################################
+
+  st.write("<br><ul><li>Quatre lignes ont été mises à jour manuellement</li></ul>", unsafe_allow_html=True)
+  df_last_miss = df[df.Year>2016]
+  st.dataframe(df_last_miss)
+
+
+  st.write("<br><ul><li>Suppression des 60 lignes dont la correspondance n'a pu être faîte malgré la somme d'informations récupérée.</li></ul>", unsafe_allow_html=True)
+  afficher_clean = st.checkbox('Afficher les données nettoyées')
+  if afficher_clean:
+    df_clean = pd.read_csv("cleaned_by_script_vgsales.csv")
+    st.text(f"Fichier complété : {df_clean.shape[0]} lignes")
+    st.dataframe(df_clean.head(50))
+
+####################################### PAGE 2 (MODELISATION (BASE)) ###################################
 if page == pages[2] : 
 
   df=pd.read_csv('cleaned_by_script_vgsales.csv')
@@ -212,7 +367,7 @@ if page == pages[2] :
   
 
 
-####################################### PAGE 3 (MACHINE LEARNING (1)) ###################################
+####################################### PAGE 3 (MACHINE LEARNING (BASE)) ###################################
 if page == pages[3] :
   ########################################################## CODE POUR LA PAGE 3 ##########
   df=pd.read_csv('cleaned_by_script_vgsales.csv')
